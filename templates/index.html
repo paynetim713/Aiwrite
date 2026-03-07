@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Identifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 480px;
+            width: 100%;
+            padding: 60px 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d2d2d;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #666;
+            margin-bottom: 40px;
+            font-weight: 400;
+        }
+
+        .upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fdfdfd;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #c0c0c0;
+            background: #f9f9f9;
+        }
+
+        .upload-area.dragover {
+            border-color: #007aff;
+            background: #f0f7ff;
+        }
+
+        .upload-area.has-images {
+            padding: 15px;
+            justify-content: flex-start;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 13px;
+            color: #999;
+        }
+
+        #preview {
+            max-width: 280px;
+            max-height: 280px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-grid {
+            display: grid;
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            min-height: 260px;
+        }
+
+        .image-grid.grid-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .image-grid.grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .image-grid.grid-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .image-grid.grid-4 {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+
+        .image-grid.grid-many {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-text {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 260px;
+        }
+
+        .result {
+            margin: 12px 0;
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result.success {
+            background: #f0f9f0;
+            color: #2d5a2d;
+            border: 1px solid #e8f5e8;
+        }
+
+        .result.loading {
+            background: #f8f9fa;
+            color: #666;
+            border: 1px solid #e9ecef;
+        }
+
+        .result.error {
+            background: #fef5f5;
+            color: #c53030;
+            border: 1px solid #fed7d7;
+        }
+
+        .result-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .result-filename {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .result-text {
+            font-size: 16px;
+        }
+
+        .results-container {
+            margin-top: 30px;
+        }
+
+        .results-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d2d2d;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .action-buttons {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            border-color: #007aff;
+            color: #007aff;
+            background: #f0f7ff;
+        }
+
+        .btn-primary {
+            background: #007aff;
+            color: white;
+            border-color: #007aff;
+        }
+
+        .btn-primary:hover {
+            background: #0056cc;
+            border-color: #0056cc;
+            color: white;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 24px;
+                margin: 20px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            #preview {
+                max-width: 240px;
+                max-height: 240px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fruit Identifier</h1>
+        <p class="subtitle">Upload images to identify fruits</p>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+            <input type="file" id="imageInput" accept="image/*" multiple onchange="uploadImage()">
+            <div class="image-grid" id="imageGrid">
+                <div class="empty-text">
+                    <div class="upload-text" id="uploadText">Click to select images</div>
+                    <div class="upload-hint" id="uploadHint">or drag and drop here</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="actionButtons" class="action-buttons" style="display: none;">
+            <button class="btn" onclick="uploadMore()">📷 Upload More</button>
+            <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
+        </div>
+
+        <div id="resultsContainer" class="results-container" style="display: none;">
+            <div class="results-title">Analysis Results</div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedImages = [];
+        let analysisResults = [];
+
+        // 拖拽功能
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('imageInput');
+        const imageGrid = document.getElementById('imageGrid');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            uploadArea.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            uploadArea.classList.remove('dragover');
+        }
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+
+        function uploadImage() {
+            const input = document.getElementById('imageInput');
+            if (input.files && input.files.length > 0) {
+                handleFiles(input.files);
+            }
+        }
+
+        function getGridClass(count) {
+            if (count === 1) return 'grid-1';
+            if (count === 2) return 'grid-2';
+            if (count === 3) return 'grid-3';
+            if (count === 4) return 'grid-4';
+            return 'grid-many';
+        }
+
+        function handleFiles(files) {
+            const newFiles = Array.from(files);
+            uploadedImages = uploadedImages.concat(newFiles);
+
+            // 更新界面
+            updateImageGrid();
+
+            // 显示按钮和结果容器
+            document.getElementById('actionButtons').style.display = 'flex';
+            document.getElementById('resultsContainer').style.display = 'block';
+
+            // 标记上传区域有图片
+            uploadArea.classList.add('has-images');
+
+            // 分析新上传的图片
+            newFiles.forEach((file, index) => {
+                setTimeout(() => {
+                    analyzeImage(file, uploadedImages.length - newFiles.length + index);
+                }, index * 300);
+            });
+        }
+
+        function updateImageGrid() {
+            const count = uploadedImages.length;
+            imageGrid.className = `image-grid ${getGridClass(count)}`;
+            imageGrid.innerHTML = '';
+
+            uploadedImages.forEach((file, index) => {
+                const img = document.createElement('img');
+                img.className = 'preview-image';
+                img.alt = `Image ${index + 1}`;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                imageGrid.appendChild(img);
+            });
+        }
+
+        function analyzeImage(file, index) {
+            const result = document.getElementById('result');
+
+            // 创建结果项
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result loading';
+            resultItem.id = `result-${index}`;
+            resultItem.innerHTML = `
+                <div class="result-content">
+                    <div class="result-filename">Image ${index + 1}: ${file.name}</div>
+                    <div class="result-text">Analyzing<span class="loading-dots"></span></div>
+                </div>
+            `;
+
+            // 按顺序插入结果
+            const existingResults = result.children;
+            let inserted = false;
+
+            for (let i = 0; i < existingResults.length; i++) {
+                const existingIndex = parseInt(existingResults[i].id.split('-')[1]);
+                if (index < existingIndex) {
+                    result.insertBefore(resultItem, existingResults[i]);
+                    inserted = true;
+                    break;
+                }
+            }
+
+            if (!inserted) {
+                result.appendChild(resultItem);
+            }
+
+            // 上传识别
+            const formData = new FormData();
+            formData.append('image', file);
+
+            fetch('/identify', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultItem.className = 'result success';
+                    resultItem.innerHTML = `
+                        <div class="result-content">
+                            <div class="result-filename">Image ${index + 1}: ${file.name}</div>
+                            <div class="result-text">This is: <strong>${data.result}</strong></div>
+                        </div>
+                    `;
+                } else {
+                    resultItem.className = 'result error';
+                    resultItem.innerHTML = `
+                        <div class="result-content">
+                            <div class="result-filename">Image ${index + 1}: ${file.name}</div>
+                            <div class="result-text">${data.error}</div>
+                        </div>
+                    `;
+                }
+
+                // 保存结果
+                analysisResults[index] = {
+                    name: file.name,
+                    result: data.success ? data.result : data.error,
+                    success: data.success
+                };
+            })
+            .catch(error => {
+                resultItem.className = 'result error';
+                resultItem.innerHTML = `
+                    <div class="result-content">
+                        <div class="result-filename">Image ${index + 1}: ${file.name}</div>
+                        <div class="result-text">Network error occurred</div>
+                    </div>
+                `;
+            });
+        }
+
+        function uploadMore() {
+            document.getElementById('imageInput').click();
+        }
+
+        function clearAll() {
+            // 清除所有数据
+            uploadedImages = [];
+            analysisResults = [];
+
+            // 重置界面
+            imageGrid.className = 'image-grid grid-1';
+            imageGrid.innerHTML = `
+                <div class="empty-text">
+                    <div class="upload-text">Click to select images</div>
+                    <div class="upload-hint">or drag and drop here</div>
+                </div>
+            `;
+
+            // 隐藏按钮和结果
+            document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('imageInput').value = '';
+
+            // 移除标记
+            uploadArea.classList.remove('has-images');
+        }
+    </script>
+</body>
+</html>
