@@ -1,0 +1,24 @@
+.git
+.gitignore
+.dockerignore
+README.md
+LICENSE
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local secrets (Anthropic key supplied via env or X-Api-Key header)
+.env
+.env.local

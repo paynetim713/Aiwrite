@@ -1,3 +1,14 @@
+---
+title: Aiwrite
+emoji: 🪶
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # Aiwrite
 
 浏览器里直接用的 AI 写作助手，Flask + Claude，12 种文字处理任务 + 流式输出 + 历史记录 + 暗色模式。
