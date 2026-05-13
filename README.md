@@ -25,34 +25,45 @@
 
 UX：
 
-- **流式输出**——边生成边显示，几个字就开始看到结果，不用等完整响应
+- **流式输出 + Stop 按钮**——边生成边显示，长输出可中途打断
 - **三档模型切换**：Haiku 4.5（快/便宜）/ Sonnet 4.6（默认）/ Opus 4.7（最佳）
 - **温度滑块**：0 死板 ↔ 1 发散
+- **Markdown 渲染**：AI 返回的标题/列表/代码块直接美化（可关）
 - **本地历史**：最近 10 条存在浏览器 localStorage，点击恢复
-- **复制按钮**、**字数统计**、**Ctrl/Cmd+Enter** 直接运行
+- **复制 + 下载 .md**、字数统计、**Ctrl/Cmd+Enter** 直接运行
 - **暗色/亮色主题**，跟系统也行手动切
+- **设置面板**：在 UI 里填自己的 Anthropic API key,带"Test"按钮验证 key 是否有效。Key 只存浏览器 localStorage,不上云
 
 ## 跑起来
 
 ```bash
 pip install -r requirements.txt
+python app.py
+```
+
+打开 `http://localhost:5000` → 点右上 **⚙ Settings** → 粘贴你的 Anthropic API key（[在这申请](https://console.anthropic.com/settings/keys)）→ Test → Save。
+
+也可以走传统的环境变量方式（适合部署到 Heroku/Railway 的场景）：
+
+```bash
 export ANTHROPIC_API_KEY=你的key
 python app.py
 ```
 
-key 在 https://console.anthropic.com/settings/keys 申请。
-
-打开 `http://localhost:5000`，粘段文字，选任务，跑。
+UI 会自动检测后端是否有环境变量 key,优先级是：**前端填的 key > 环境变量 key**。
 
 ## API
 
 不止 Web UI，后端也能直接调：
+
+所有 POST endpoint 都接受 `X-Api-Key: sk-ant-...` header（前端 UI 自动带）。不带就走服务器的 `ANTHROPIC_API_KEY` 环境变量。
 
 **`POST /api/generate`** — 一次性返回
 
 ```bash
 curl -X POST http://localhost:5000/api/generate \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: sk-ant-xxx" \
   -d '{"task": "improve", "text": "这段话需要润色一下", "model": "claude-sonnet-4-6", "temperature": 0.7}'
 ```
 
@@ -61,12 +72,21 @@ curl -X POST http://localhost:5000/api/generate \
 ```bash
 curl -N -X POST http://localhost:5000/api/stream \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: sk-ant-xxx" \
   -d '{"task": "translate", "text": "你好世界", "target_language": "English"}'
 ```
 
 每个 SSE event 是 `data: {"chunk": "..."}\n\n`，结束发 `data: {"done": true}\n\n`。错误发 `data: {"error": "..."}\n\n`。
 
-**`GET /api/health`** — 检查后端 + key 是否就绪。
+**`POST /api/validate`** — 用一次廉价的 Haiku 调用验证 key 是否有效，前端的 Test 按钮就走这条。
+
+```bash
+curl -X POST http://localhost:5000/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "sk-ant-xxx"}'
+```
+
+**`GET /api/health`** — 返回后端是否就绪 + 服务器有没有配 `ANTHROPIC_API_KEY`。
 
 ## 部署
 
@@ -100,9 +120,9 @@ TASKS["your_task"] = {"label": "Your Task", "fn": _your_task}
 
 ## 已知问题
 
-- **没做 rate limit**。部署到公网随便给人用的话，被刷会扣你账户余额。简单做法是上 Cloudflare 或在 nginx 层加限流。
-- **localStorage 历史**最大 5MB，存多了浏览器会拒绝。我只留最近 10 条，正常用不到限制。
-- **API key 在后端**，前端拿不到——所以这个工具不能做成"用户带自己的 key"的形态，部署者承担费用。
+- **没做 rate limit**。如果你用环境变量 key 部署给所有人用,被刷会扣你账户余额。简单做法是 Cloudflare / nginx 加一层。如果是"BYO key"模式(用户自己填 key),那就是用户自己的账户,你不背锅。
+- **localStorage 历史**最大 5MB,存多了浏览器会拒绝。我只留最近 10 条,正常用不到限制。
+- **Key 存在浏览器 localStorage**: 同设备同浏览器的扩展/网页都能读,真正敏感的环境别用 BYO 模式,走环境变量。
 
 ## 协议
 

@@ -5,6 +5,10 @@ Aiwrite — AI writing assistant powered by Claude.
 paraphrase / translate / tone / simplify / outline / custom.
 
 Streaming output via Server-Sent Events.
+
+API key sources, in order of preference:
+  1. X-Api-Key request header (set by the UI from localStorage)
+  2. ANTHROPIC_API_KEY environment variable
 """
 
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
@@ -14,7 +18,6 @@ import json
 
 app = Flask(__name__)
 
-# 默认模型。前端可以覆盖(Haiku 快/便宜,Opus 慢/最强)
 DEFAULT_MODEL = "claude-sonnet-4-6"
 ALLOWED_MODELS = {
     "claude-haiku-4-5-20251001",
@@ -22,10 +25,8 @@ ALLOWED_MODELS = {
     "claude-opus-4-7",
 }
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-
 # ──────────────────────────────────────────────────────────────────────
-# 任务定义。每个任务有 system prompt + 一个生成 user prompt 的函数。
+# Task definitions
 # ──────────────────────────────────────────────────────────────────────
 
 def _improve(text, **_):
@@ -115,14 +116,8 @@ def _outline(text, **_):
 
 def _custom(text, custom_prompt="", **_):
     if not custom_prompt:
-        return (
-            "You are a helpful writing assistant.",
-            text,
-        )
-    return (
-        custom_prompt,
-        text,
-    )
+        return ("You are a helpful writing assistant.", text)
+    return (custom_prompt, text)
 
 
 TASKS = {
@@ -155,22 +150,58 @@ def home():
 def health():
     return jsonify({
         "ok": True,
-        "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "has_env_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
     })
+
+
+@app.route("/api/validate", methods=["POST"])
+def validate_key():
+    """
+    Cheap call to verify a user-supplied API key actually works.
+    Body: {"api_key": "sk-ant-..."} (optional; falls back to env var)
+    """
+    data = request.get_json(silent=True) or {}
+    key = data.get("api_key") or os.environ.get("ANTHROPIC_API_KEY") or ""
+    if not key.strip():
+        return jsonify({"ok": False, "error": "No API key provided."}), 400
+    try:
+        c = anthropic.Anthropic(api_key=key.strip())
+        msg = c.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        # Successful round-trip → key is valid
+        _ = msg.content
+        return jsonify({"ok": True, "message": "API key works."})
+    except anthropic.AuthenticationError:
+        return jsonify({"ok": False, "error": "Invalid API key."}), 401
+    except anthropic.PermissionDeniedError:
+        return jsonify({"ok": False, "error": "Key has no permission for this model."}), 403
+    except anthropic.RateLimitError:
+        return jsonify({"ok": False, "error": "Rate limited. Try again in a moment."}), 429
+    except anthropic.APIError as e:
+        return jsonify({"ok": False, "error": f"Claude API error: {e}"}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
-    """Non-streaming fallback. Useful for clients that can't do SSE."""
+    """Non-streaming fallback."""
     data = request.get_json(silent=True) or {}
     try:
         system, user = _build_prompt(data)
     except ValueError as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-    model = data.get("model", DEFAULT_MODEL)
-    if model not in ALLOWED_MODELS:
-        model = DEFAULT_MODEL
+    client_or_err = _get_client(request)
+    if isinstance(client_or_err, tuple):
+        err_msg, status = client_or_err
+        return jsonify({"success": False, "error": err_msg}), status
+    client = client_or_err
+
+    model = _pick_model(data.get("model"))
     temperature = _clamp_temp(data.get("temperature", 0.7))
 
     try:
@@ -182,6 +213,10 @@ def generate():
             messages=[{"role": "user", "content": user}],
         )
         return jsonify({"success": True, "result": msg.content[0].text})
+    except anthropic.AuthenticationError:
+        return jsonify({"success": False, "error": "Invalid API key. Check Settings."}), 401
+    except anthropic.RateLimitError:
+        return jsonify({"success": False, "error": "Rate limited. Slow down a bit."}), 429
     except anthropic.APIError as e:
         return jsonify({"success": False, "error": f"Claude API error: {e}"}), 502
     except Exception as e:
@@ -190,16 +225,20 @@ def generate():
 
 @app.route("/api/stream", methods=["POST"])
 def stream():
-    """Streaming endpoint via SSE. Frontend uses this by default."""
+    """Streaming endpoint via SSE."""
     data = request.get_json(silent=True) or {}
     try:
         system, user = _build_prompt(data)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    model = data.get("model", DEFAULT_MODEL)
-    if model not in ALLOWED_MODELS:
-        model = DEFAULT_MODEL
+    client_or_err = _get_client(request)
+    if isinstance(client_or_err, tuple):
+        err_msg, status = client_or_err
+        return jsonify({"error": err_msg}), status
+    client = client_or_err
+
+    model = _pick_model(data.get("model"))
     temperature = _clamp_temp(data.get("temperature", 0.7))
 
     @stream_with_context
@@ -215,6 +254,10 @@ def stream():
                 for chunk in s.text_stream:
                     yield f"data: {json.dumps({'chunk': chunk}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
+        except anthropic.AuthenticationError:
+            yield f"data: {json.dumps({'error': 'Invalid API key. Check Settings.'})}\n\n"
+        except anthropic.RateLimitError:
+            yield f"data: {json.dumps({'error': 'Rate limited. Slow down a bit.'})}\n\n"
         except anthropic.APIError as e:
             yield f"data: {json.dumps({'error': f'Claude API error: {e}'})}\n\n"
         except Exception as e:
@@ -226,6 +269,24 @@ def stream():
 # ──────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────
+
+def _get_client(req):
+    """Return an Anthropic client, or (error_message, http_status) tuple."""
+    # Prefer per-request header (set by UI from localStorage), fall back to env
+    key = (req.headers.get("X-Api-Key") or "").strip() \
+        or os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not key:
+        return (
+            "No API key. Open Settings (top right) and paste your key, or set "
+            "ANTHROPIC_API_KEY in the server environment.",
+            401,
+        )
+    return anthropic.Anthropic(api_key=key)
+
+
+def _pick_model(m):
+    return m if m in ALLOWED_MODELS else DEFAULT_MODEL
+
 
 def _build_prompt(data):
     text = (data.get("text") or "").strip()
