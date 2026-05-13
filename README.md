@@ -13,7 +13,7 @@ license: mit
 
 浏览器里直接用的 AI 写作助手，Flask + Claude，12 种文字处理任务 + 流式输出 + 历史记录 + 暗色模式。
 
-写这个的契机：日常需要快速润色一段话或者切换语气，每次开 ChatGPT/Claude 网页都要先打一遍 prompt 太烦，所以做了一个一键操作的小工具。
+写这个的契机：日常需要快速润色一段话或者切换语气，每次开 ChatGPT/Claude 网页都要先打一遍 prompt 太烦，所以做了一个一键操作的小工具。Link:https://huggingface.co/spaces/chisddd/chrisspace
 
 ## 功能
 
