@@ -1,512 +1,540 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fruit Identifier</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aiwrite — AI writing assistant</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --border: #e5e5e5;
+    --border-strong: #d0d0d0;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --primary: #0066ff;
+    --primary-hover: #0052cc;
+    --primary-bg: #eef4ff;
+    --danger: #c53030;
+    --success: #2d7d4f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  [data-theme="dark"] {
+    --bg: #0f0f10;
+    --surface: #1a1a1c;
+    --border: #2a2a2e;
+    --border-strong: #3a3a3f;
+    --text: #e8e8ea;
+    --text-muted: #888892;
+    --primary: #4c8bff;
+    --primary-hover: #6aa0ff;
+    --primary-bg: #1a2540;
+    --danger: #ff6b6b;
+    --success: #4fcc7f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    min-height: 100vh;
+    transition: background .2s, color .2s;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  header h1 .accent { color: var(--primary); }
+  header .actions { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; font-size: 13px; color: var(--text-muted); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .icon-btn:hover { border-color: var(--border-strong); color: var(--text); }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #fafafa;
-            color: #1a1a1a;
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+  main {
+    max-width: 1400px; margin: 0 auto; padding: 20px 24px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    min-height: calc(100vh - 60px);
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
 
-        .container {
-            max-width: 480px;
-            width: 100%;
-            padding: 60px 40px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            text-align: center;
-        }
+  .pane {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .pane-header { display: flex; justify-content: space-between; align-items: center; }
+  .pane-header h2 { font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pane-header .meta { font-size: 12px; color: var(--text-muted); }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2d2d2d;
-            margin-bottom: 8px;
-            letter-spacing: -0.02em;
-        }
+  textarea, .result-box {
+    width: 100%; flex: 1; min-height: 360px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+    font: 15px/1.6 -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    background: var(--bg); color: var(--text); resize: vertical;
+    transition: border-color .15s;
+  }
+  textarea:focus { outline: none; border-color: var(--primary); }
+  .result-box { white-space: pre-wrap; word-break: break-word; overflow-y: auto; }
+  .result-box.empty { color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .result-box .cursor { display: inline-block; width: 2px; height: 1em; background: var(--primary); vertical-align: text-bottom; animation: blink 1s steps(2) infinite; margin-left: 2px; }
+  @keyframes blink { 50% { opacity: 0; } }
 
-        .subtitle {
-            font-size: 15px;
-            color: #666;
-            margin-bottom: 40px;
-            font-weight: 400;
-        }
+  .controls {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .task-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .task {
+    padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--text-muted); font-size: 13px; cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .task:hover { border-color: var(--border-strong); color: var(--text); }
+  .task.active { background: var(--primary-bg); border-color: var(--primary); color: var(--primary); font-weight: 500; }
 
-        .upload-area {
-            border: 2px dashed #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 30px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: #fdfdfd;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+  .settings { margin-top: 14px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .settings label { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  select, input[type=text] {
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+    background: var(--surface); color: var(--text); font: inherit; font-size: 13px;
+  }
+  input[type=range] { width: 100px; accent-color: var(--primary); }
+  .temp-val { font-variant-numeric: tabular-nums; min-width: 28px; display: inline-block; }
 
-        .upload-area:hover {
-            border-color: #c0c0c0;
-            background: #f9f9f9;
-        }
+  .custom-prompt, .translate-row, .tone-row {
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: none;
+  }
+  .custom-prompt.visible, .translate-row.visible, .tone-row.visible { display: block; }
+  .custom-prompt input { width: 100%; padding: 8px 10px; font-size: 14px; }
 
-        .upload-area.dragover {
-            border-color: #007aff;
-            background: #f0f7ff;
-        }
+  .run-btn {
+    background: var(--primary); color: white; border: none; border-radius: 8px;
+    padding: 10px 22px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s;
+  }
+  .run-btn:hover:not(:disabled) { background: var(--primary-hover); }
+  .run-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .clear-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-size: 14px; }
+  .clear-btn:hover { color: var(--text); border-color: var(--border-strong); }
 
-        .upload-area.has-images {
-            padding: 15px;
-            justify-content: flex-start;
-        }
+  .button-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 
-        input[type="file"] {
-            display: none;
-        }
+  .copy-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .copy-btn:hover { color: var(--primary); border-color: var(--primary); }
+  .copy-btn.done { color: var(--success); border-color: var(--success); }
 
-        .upload-text {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 8px;
-        }
+  .error-box {
+    color: var(--danger); background: rgba(197, 48, 48, 0.08); border: 1px solid rgba(197, 48, 48, 0.2);
+    padding: 10px 12px; border-radius: 6px; font-size: 14px; margin-top: 10px;
+  }
 
-        .upload-hint {
-            font-size: 13px;
-            color: #999;
-        }
+  .history {
+    margin-top: 18px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow);
+  }
+  .history-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .history-header h3 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .history-list { margin-top: 10px; max-height: 280px; overflow-y: auto; display: none; }
+  .history.open .history-list { display: block; }
+  .history-item {
+    padding: 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+    margin-bottom: 6px; font-size: 13px;
+  }
+  .history-item:hover { background: var(--bg); border-color: var(--border); }
+  .history-item .h-task { font-size: 11px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .history-item .h-text { color: var(--text); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        #preview {
-            max-width: 280px;
-            max-height: 280px;
-            border-radius: 8px;
-            margin: 20px 0;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .image-grid {
-            display: grid;
-            gap: 10px;
-            width: 100%;
-            height: 100%;
-            min-height: 260px;
-        }
-
-        .image-grid.grid-1 {
-            grid-template-columns: 1fr;
-        }
-
-        .image-grid.grid-2 {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .image-grid.grid-3 {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-
-        .image-grid.grid-4 {
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-        }
-
-        .image-grid.grid-many {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .preview-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .empty-text {
-            grid-column: 1 / -1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 260px;
-        }
-
-        .result {
-            margin: 12px 0;
-            padding: 18px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .result.success {
-            background: #f0f9f0;
-            color: #2d5a2d;
-            border: 1px solid #e8f5e8;
-        }
-
-        .result.loading {
-            background: #f8f9fa;
-            color: #666;
-            border: 1px solid #e9ecef;
-        }
-
-        .result.error {
-            background: #fef5f5;
-            color: #c53030;
-            border: 1px solid #fed7d7;
-        }
-
-        .result-content {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-
-        .result-filename {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .result-text {
-            font-size: 16px;
-        }
-
-        .results-container {
-            margin-top: 30px;
-        }
-
-        .results-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2d2d2d;
-            margin-bottom: 16px;
-            text-align: left;
-        }
-
-        .action-buttons {
-            margin-top: 24px;
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background: white;
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn:hover {
-            border-color: #007aff;
-            color: #007aff;
-            background: #f0f7ff;
-        }
-
-        .btn-primary {
-            background: #007aff;
-            color: white;
-            border-color: #007aff;
-        }
-
-        .btn-primary:hover {
-            background: #0056cc;
-            border-color: #0056cc;
-            color: white;
-        }
-
-        .loading-dots {
-            display: inline-block;
-        }
-
-        .loading-dots::after {
-            content: '';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 40px 24px;
-                margin: 20px;
-                border-radius: 0;
-                box-shadow: none;
-            }
-
-            #preview {
-                max-width: 240px;
-                max-height: 240px;
-            }
-        }
-    </style>
+  footer { text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px; }
+  footer a { color: var(--text-muted); text-decoration: none; border-bottom: 1px dotted; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Fruit Identifier</h1>
-        <p class="subtitle">Upload images to identify fruits</p>
 
-        <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
-            <input type="file" id="imageInput" accept="image/*" multiple onchange="uploadImage()">
-            <div class="image-grid" id="imageGrid">
-                <div class="empty-text">
-                    <div class="upload-text" id="uploadText">Click to select images</div>
-                    <div class="upload-hint" id="uploadHint">or drag and drop here</div>
-                </div>
-            </div>
-        </div>
+<header>
+  <h1>Aiwrite<span class="accent">.</span></h1>
+  <div class="actions">
+    <button class="icon-btn" id="themeBtn" title="Toggle theme">🌓</button>
+    <a class="icon-btn" href="https://github.com/paynetim713/Aiwrite" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
 
-        <div id="actionButtons" class="action-buttons" style="display: none;">
-            <button class="btn" onclick="uploadMore()">📷 Upload More</button>
-            <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
-        </div>
+<main>
+  <div style="grid-column: 1 / -1;">
 
-        <div id="resultsContainer" class="results-container" style="display: none;">
-            <div class="results-title">Analysis Results</div>
-            <div id="result"></div>
-        </div>
+    <div class="controls">
+      <div class="task-row" id="taskRow">
+        {% for t in tasks %}
+        <div class="task{% if loop.first %} active{% endif %}" data-task="{{ t.key }}">{{ t.label }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="translate-row" id="translateRow">
+        <label>Target language:
+          <select id="targetLang">
+            <option value="English">English</option>
+            <option value="Simplified Chinese">简体中文</option>
+            <option value="Traditional Chinese">繁體中文</option>
+            <option value="Japanese">日本語</option>
+            <option value="Korean">한국어</option>
+            <option value="French">Français</option>
+            <option value="Spanish">Español</option>
+            <option value="German">Deutsch</option>
+            <option value="Malay">Bahasa Melayu</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="tone-row" id="toneRow">
+        <label>Tone:
+          <select id="toneSelect">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual</option>
+            <option value="formal">Formal</option>
+            <option value="friendly">Friendly</option>
+            <option value="academic">Academic</option>
+            <option value="persuasive">Persuasive</option>
+            <option value="humorous">Humorous</option>
+            <option value="concise">Concise</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="custom-prompt" id="customRow">
+        <input type="text" id="customPrompt" placeholder="自定义指令: 比如 '用鲁迅风格改写' / 'rewrite as a tweet'">
+      </div>
+
+      <div class="settings">
+        <label>Model:
+          <select id="modelSelect">
+            <option value="claude-haiku-4-5-20251001">Haiku 4.5 (fast)</option>
+            <option value="claude-sonnet-4-6" selected>Sonnet 4.6 (balanced)</option>
+            <option value="claude-opus-4-7">Opus 4.7 (best)</option>
+          </select>
+        </label>
+        <label>Creativity:
+          <input type="range" id="tempRange" min="0" max="100" value="70">
+          <span class="temp-val" id="tempVal">0.7</span>
+        </label>
+        <label>
+          <input type="checkbox" id="streamToggle" checked> Stream
+        </label>
+      </div>
     </div>
 
-    <script>
-        let uploadedImages = [];
-        let analysisResults = [];
+  </div>
 
-        // 拖拽功能
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('imageInput');
-        const imageGrid = document.getElementById('imageGrid');
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Input</h2>
+      <span class="meta" id="inputMeta">0 words · 0 chars</span>
+    </div>
+    <textarea id="inputBox" placeholder="粘贴或输入文本... / paste or type your text here..."></textarea>
+    <div class="button-row">
+      <button class="clear-btn" id="clearBtn">Clear</button>
+      <button class="run-btn" id="runBtn">Run ✨</button>
+    </div>
+  </div>
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, preventDefaults, false);
-        });
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Output</h2>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="meta" id="outputMeta"></span>
+        <button class="copy-btn" id="copyBtn" style="display:none;">Copy</button>
+      </div>
+    </div>
+    <div class="result-box empty" id="resultBox">Results will appear here.</div>
+    <div id="errorBox"></div>
+  </div>
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+  <div style="grid-column: 1 / -1;">
+    <div class="history" id="history">
+      <div class="history-header" id="historyHeader">
+        <h3>History (<span id="historyCount">0</span>)</h3>
+        <span style="font-size: 12px; color: var(--text-muted);">click to toggle</span>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Built with Flask + Claude. <a href="https://github.com/paynetim713/Aiwrite" target="_blank" rel="noopener">Source on GitHub</a>.
+</footer>
+
+<script>
+const state = {
+  task: 'improve',
+  inFlight: null,
+  controller: null,
+};
+
+// ── elements ──
+const $ = (id) => document.getElementById(id);
+const taskRow = $('taskRow');
+const inputBox = $('inputBox');
+const resultBox = $('resultBox');
+const errorBox = $('errorBox');
+const inputMeta = $('inputMeta');
+const outputMeta = $('outputMeta');
+const copyBtn = $('copyBtn');
+const runBtn = $('runBtn');
+const clearBtn = $('clearBtn');
+const tempRange = $('tempRange');
+const tempVal = $('tempVal');
+const modelSelect = $('modelSelect');
+const streamToggle = $('streamToggle');
+const themeBtn = $('themeBtn');
+const customRow = $('customRow');
+const customPrompt = $('customPrompt');
+const translateRow = $('translateRow');
+const targetLang = $('targetLang');
+const toneRow = $('toneRow');
+const toneSelect = $('toneSelect');
+const history = $('history');
+const historyHeader = $('historyHeader');
+const historyList = $('historyList');
+const historyCount = $('historyCount');
+
+// ── theme ──
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('aiwrite_theme', t);
+}
+applyTheme(localStorage.getItem('aiwrite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ── task switcher ──
+taskRow.addEventListener('click', (e) => {
+  const t = e.target.closest('.task');
+  if (!t) return;
+  state.task = t.dataset.task;
+  taskRow.querySelectorAll('.task').forEach(el => el.classList.toggle('active', el === t));
+  customRow.classList.toggle('visible', state.task === 'custom');
+  translateRow.classList.toggle('visible', state.task === 'translate');
+  toneRow.classList.toggle('visible', state.task === 'tone');
+});
+
+// ── input meta ──
+function updateInputMeta() {
+  const text = inputBox.value;
+  const chars = text.length;
+  const words = (text.trim().match(/\S+/g) || []).length;
+  inputMeta.textContent = `${words} words · ${chars} chars`;
+}
+inputBox.addEventListener('input', updateInputMeta);
+updateInputMeta();
+
+// ── temperature ──
+tempRange.addEventListener('input', () => {
+  tempVal.textContent = (tempRange.value / 100).toFixed(2);
+});
+
+// ── clear ──
+clearBtn.addEventListener('click', () => {
+  inputBox.value = '';
+  updateInputMeta();
+  clearOutput();
+});
+
+function clearOutput() {
+  resultBox.classList.add('empty');
+  resultBox.textContent = 'Results will appear here.';
+  outputMeta.textContent = '';
+  copyBtn.style.display = 'none';
+  errorBox.innerHTML = '';
+}
+
+// ── copy ──
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(resultBox.textContent);
+    copyBtn.textContent = 'Copied ✓';
+    copyBtn.classList.add('done');
+    setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('done'); }, 1600);
+  } catch (e) {
+    copyBtn.textContent = 'Failed';
+  }
+});
+
+// ── run ──
+runBtn.addEventListener('click', async () => {
+  const text = inputBox.value.trim();
+  if (!text && state.task !== 'custom') {
+    showError('Please paste some text first.');
+    return;
+  }
+  if (state.task === 'custom' && !customPrompt.value.trim() && !text) {
+    showError('Please add either input text or a custom prompt.');
+    return;
+  }
+
+  errorBox.innerHTML = '';
+  resultBox.classList.remove('empty');
+  resultBox.textContent = '';
+  copyBtn.style.display = 'none';
+  outputMeta.textContent = '';
+  runBtn.disabled = true;
+  runBtn.textContent = 'Running...';
+
+  const payload = {
+    task: state.task,
+    text,
+    model: modelSelect.value,
+    temperature: (tempRange.value / 100).toFixed(2),
+    target_language: targetLang.value,
+    tone: toneSelect.value,
+    custom_prompt: customPrompt.value,
+  };
+
+  try {
+    if (streamToggle.checked) {
+      await runStream(payload);
+    } else {
+      await runOneShot(payload);
+    }
+    saveHistory(payload, resultBox.textContent);
+  } catch (e) {
+    if (e.name !== 'AbortError') showError(e.message || String(e));
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = 'Run ✨';
+    copyBtn.style.display = resultBox.textContent ? '' : 'none';
+  }
+});
+
+async function runOneShot(payload) {
+  const r = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json();
+  if (!data.success) throw new Error(data.error || 'Unknown error');
+  resultBox.textContent = data.result;
+  outputMeta.textContent = `${data.result.length} chars`;
+}
+
+async function runStream(payload) {
+  // 用 fetch + reader 手动读 SSE,比 EventSource 灵活(EventSource 不支持 POST)
+  const r = await fetch('/api/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let acc = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  resultBox.appendChild(cursor);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf('\n\n')) !== -1) {
+      const event = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      for (const line of event.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const json = line.slice(5).trim();
+        if (!json) continue;
+        let parsed;
+        try { parsed = JSON.parse(json); } catch { continue; }
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.chunk) {
+          acc += parsed.chunk;
+          cursor.remove();
+          resultBox.textContent = acc;
+          resultBox.appendChild(cursor);
+          resultBox.scrollTop = resultBox.scrollHeight;
         }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, unhighlight, false);
-        });
-
-        function highlight() {
-            uploadArea.classList.add('dragover');
+        if (parsed.done) {
+          cursor.remove();
         }
+      }
+    }
+  }
+  outputMeta.textContent = `${acc.length} chars`;
+}
 
-        function unhighlight() {
-            uploadArea.classList.remove('dragover');
-        }
+function showError(msg) {
+  errorBox.innerHTML = `<div class="error-box">${escapeHtml(msg)}</div>`;
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
-        uploadArea.addEventListener('drop', handleDrop, false);
+// ── history (localStorage) ──
+const HISTORY_KEY = 'aiwrite_history_v1';
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function saveHistory(payload, result) {
+  if (!result || !result.trim()) return;
+  const items = getHistory();
+  items.unshift({
+    task: payload.task,
+    text: payload.text,
+    result,
+    custom_prompt: payload.custom_prompt,
+    target_language: payload.target_language,
+    tone: payload.tone,
+    at: Date.now(),
+  });
+  // keep latest 10
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 10)));
+  renderHistory();
+}
+function renderHistory() {
+  const items = getHistory();
+  historyCount.textContent = items.length;
+  historyList.innerHTML = '';
+  for (const it of items) {
+    const node = document.createElement('div');
+    node.className = 'history-item';
+    node.innerHTML = `
+      <div class="h-task">${it.task}${it.task === 'translate' ? ' → ' + (it.target_language || '') : ''}${it.task === 'tone' ? ' · ' + (it.tone || '') : ''}</div>
+      <div class="h-text">${escapeHtml((it.text || it.custom_prompt || '').slice(0, 200))}</div>
+    `;
+    node.addEventListener('click', () => {
+      inputBox.value = it.text || '';
+      resultBox.classList.remove('empty');
+      resultBox.textContent = it.result;
+      updateInputMeta();
+      copyBtn.style.display = '';
+      outputMeta.textContent = `${it.result.length} chars`;
+    });
+    historyList.appendChild(node);
+  }
+}
+historyHeader.addEventListener('click', () => history.classList.toggle('open'));
+renderHistory();
 
-        function handleDrop(e) {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFiles(files);
-            }
-        }
-
-        function uploadImage() {
-            const input = document.getElementById('imageInput');
-            if (input.files && input.files.length > 0) {
-                handleFiles(input.files);
-            }
-        }
-
-        function getGridClass(count) {
-            if (count === 1) return 'grid-1';
-            if (count === 2) return 'grid-2';
-            if (count === 3) return 'grid-3';
-            if (count === 4) return 'grid-4';
-            return 'grid-many';
-        }
-
-        function handleFiles(files) {
-            const newFiles = Array.from(files);
-            uploadedImages = uploadedImages.concat(newFiles);
-
-            // 更新界面
-            updateImageGrid();
-
-            // 显示按钮和结果容器
-            document.getElementById('actionButtons').style.display = 'flex';
-            document.getElementById('resultsContainer').style.display = 'block';
-
-            // 标记上传区域有图片
-            uploadArea.classList.add('has-images');
-
-            // 分析新上传的图片
-            newFiles.forEach((file, index) => {
-                setTimeout(() => {
-                    analyzeImage(file, uploadedImages.length - newFiles.length + index);
-                }, index * 300);
-            });
-        }
-
-        function updateImageGrid() {
-            const count = uploadedImages.length;
-            imageGrid.className = `image-grid ${getGridClass(count)}`;
-            imageGrid.innerHTML = '';
-
-            uploadedImages.forEach((file, index) => {
-                const img = document.createElement('img');
-                img.className = 'preview-image';
-                img.alt = `Image ${index + 1}`;
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-
-                imageGrid.appendChild(img);
-            });
-        }
-
-        function analyzeImage(file, index) {
-            const result = document.getElementById('result');
-
-            // 创建结果项
-            const resultItem = document.createElement('div');
-            resultItem.className = 'result loading';
-            resultItem.id = `result-${index}`;
-            resultItem.innerHTML = `
-                <div class="result-content">
-                    <div class="result-filename">Image ${index + 1}: ${file.name}</div>
-                    <div class="result-text">Analyzing<span class="loading-dots"></span></div>
-                </div>
-            `;
-
-            // 按顺序插入结果
-            const existingResults = result.children;
-            let inserted = false;
-
-            for (let i = 0; i < existingResults.length; i++) {
-                const existingIndex = parseInt(existingResults[i].id.split('-')[1]);
-                if (index < existingIndex) {
-                    result.insertBefore(resultItem, existingResults[i]);
-                    inserted = true;
-                    break;
-                }
-            }
-
-            if (!inserted) {
-                result.appendChild(resultItem);
-            }
-
-            // 上传识别
-            const formData = new FormData();
-            formData.append('image', file);
-
-            fetch('/identify', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultItem.className = 'result success';
-                    resultItem.innerHTML = `
-                        <div class="result-content">
-                            <div class="result-filename">Image ${index + 1}: ${file.name}</div>
-                            <div class="result-text">This is: <strong>${data.result}</strong></div>
-                        </div>
-                    `;
-                } else {
-                    resultItem.className = 'result error';
-                    resultItem.innerHTML = `
-                        <div class="result-content">
-                            <div class="result-filename">Image ${index + 1}: ${file.name}</div>
-                            <div class="result-text">${data.error}</div>
-                        </div>
-                    `;
-                }
-
-                // 保存结果
-                analysisResults[index] = {
-                    name: file.name,
-                    result: data.success ? data.result : data.error,
-                    success: data.success
-                };
-            })
-            .catch(error => {
-                resultItem.className = 'result error';
-                resultItem.innerHTML = `
-                    <div class="result-content">
-                        <div class="result-filename">Image ${index + 1}: ${file.name}</div>
-                        <div class="result-text">Network error occurred</div>
-                    </div>
-                `;
-            });
-        }
-
-        function uploadMore() {
-            document.getElementById('imageInput').click();
-        }
-
-        function clearAll() {
-            // 清除所有数据
-            uploadedImages = [];
-            analysisResults = [];
-
-            // 重置界面
-            imageGrid.className = 'image-grid grid-1';
-            imageGrid.innerHTML = `
-                <div class="empty-text">
-                    <div class="upload-text">Click to select images</div>
-                    <div class="upload-hint">or drag and drop here</div>
-                </div>
-            `;
-
-            // 隐藏按钮和结果
-            document.getElementById('actionButtons').style.display = 'none';
-            document.getElementById('resultsContainer').style.display = 'none';
-            document.getElementById('result').innerHTML = '';
-            document.getElementById('imageInput').value = '';
-
-            // 移除标记
-            uploadArea.classList.remove('has-images');
-        }
-    </script>
+// ── keyboard shortcut: Ctrl/Cmd + Enter to run ──
+inputBox.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runBtn.click();
+  }
+});
+</script>
 </body>
 </html>
