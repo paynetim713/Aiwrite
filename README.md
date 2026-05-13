@@ -33,11 +33,6 @@ web: gunicorn app:app
 
 Heroku / Railway / Render 任选，设置 `ANTHROPIC_API_KEY` 环境变量。
 
-## 注意
-
-- 用的是 `claude-sonnet-4-20250514`，写在 `app.py` 里。Anthropic 出新模型的时候改一下版本号就行。
-- 没有 rate limit，部署到公网的话最好加一层（不然被刷会烧你账户的钱）。
-
 ## 协议
 
 MIT。
